@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHeader();
     }
 
-    // --- 상점 (팩 구매) 기능 복구 ---
+    // --- 상점 (팩 구매) 기능 ---
     if (buyPackBtn) {
         buyPackBtn.addEventListener('click', () => {
             if (gameState.bp < 1000) {
@@ -100,6 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const PLAYER_SPEED = 3.2;
     const BALL_FRICTION = 0.95;
+    const MARGIN = 20; // 경기장 경계 마진
+    const GOAL_WIDTH = 15;
+    const GOAL_HEIGHT = 120;
 
     let homeTeam = [];
     let awayTeam = [];
@@ -168,8 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ball.owner = null;
         ball.cooldownTimer = 25;
 
-        const goalX = canvas.width - 10;
-        const goalY = canvas.height / 2 + (Math.random() * 60 - 30);
+        const goalX = canvas.width - MARGIN;
+        const goalY = canvas.height / 2 + (Math.random() * 40 - 20);
         
         const angle = Math.atan2(goalY - cp.y, goalX - cp.x);
         ball.x = cp.x + Math.cos(angle) * 18;
@@ -214,14 +217,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 5. 경기 세팅 및 진행 ---
     const homeFormations = [
-        { role: 'GK', baseX: 0.06, baseY: 0.50 },
+        { role: 'GK', baseX: 0.08, baseY: 0.50 },
         { role: 'DF', baseX: 0.22, baseY: 0.50 },
         { role: 'MF', baseX: 0.38, baseY: 0.28 },
         { role: 'FW', baseX: 0.46, baseY: 0.72 }
     ];
 
     const awayFormations = [
-        { role: 'GK', baseX: 0.94, baseY: 0.50 },
+        { role: 'GK', baseX: 0.92, baseY: 0.50 },
         { role: 'DF', baseX: 0.78, baseY: 0.50 },
         { role: 'MF', baseX: 0.62, baseY: 0.72 },
         { role: 'FW', baseX: 0.54, baseY: 0.28 }
@@ -299,7 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
         homeTeam[controlledIndex].isControlled = true;
     }
 
-    // --- 경기 시작 버튼 이벤트 복구 ---
     if (startMatchBtn) {
         startMatchBtn.addEventListener('click', () => {
             isMatchRunning = true;
@@ -335,18 +337,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     }
 
+    // 선수 경기장 이탈 방지 처리 함수
+    function constrainPlayerToBounds(p) {
+        const radius = 10;
+        p.x = Math.max(MARGIN + radius, Math.min(canvas.width - MARGIN - radius, p.x));
+        p.y = Math.max(MARGIN + radius, Math.min(canvas.height - MARGIN - radius, p.y));
+    }
+
     function updateIndependentAI(team) {
         const now = Date.now() * 0.002;
 
         team.forEach((p) => {
-            if (p.isControlled || p === ball.owner) return;
+            if (p.isControlled || p === ball.owner) {
+                constrainPlayerToBounds(p);
+                return;
+            }
 
             let targetX = canvas.width * p.baseX;
             let targetY = canvas.height * p.baseY;
 
             if (p.role === 'GK') {
                 targetY = canvas.height / 2 + (ball.y - canvas.height / 2) * 0.4;
-                targetY = Math.max(canvas.height / 2 - 60, Math.min(canvas.height / 2 + 60, targetY));
+                targetY = Math.max(canvas.height / 2 - 50, Math.min(canvas.height / 2 + 50, targetY));
             } else if (p.role === 'DF') {
                 targetX = canvas.width * p.baseX + (ball.x - canvas.width / 2) * 0.2;
                 targetY = canvas.height * p.baseY + Math.sin(now + p.aiSeed) * 30;
@@ -374,6 +386,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 p.y += Math.sin(angle) * p.speed;
                 p.facingAngle = angle;
             }
+
+            constrainPlayerToBounds(p);
         });
     }
 
@@ -384,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (enemy.x < canvas.width * 0.35) {
                 ball.owner = null;
                 ball.cooldownTimer = 25;
-                const angle = Math.atan2(canvas.height / 2 - ball.y, 10 - ball.x);
+                const angle = Math.atan2(canvas.height / 2 - ball.y, MARGIN - ball.x);
                 ball.vx = Math.cos(angle) * 16;
                 ball.vy = Math.sin(angle) * 16;
             } else if (Math.random() < 0.012) {
@@ -425,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cp.y += dy * PLAYER_SPEED;
                 cp.facingAngle = Math.atan2(dy, dx);
             }
+            constrainPlayerToBounds(cp);
         }
 
         if (ball.owner) {
@@ -458,24 +473,35 @@ document.addEventListener('DOMContentLoaded', () => {
         updateIndependentAI(awayTeam);
         handleEnemyDecision();
 
-        if (ball.x >= canvas.width - 12) {
-            if (ball.y > canvas.height / 2 - 75 && ball.y < canvas.height / 2 + 75) {
+        // 득점 판정 및 공 벽 충돌
+        const goalTop = canvas.height / 2 - GOAL_HEIGHT / 2;
+        const goalBottom = canvas.height / 2 + GOAL_HEIGHT / 2;
+
+        if (ball.x >= canvas.width - MARGIN) {
+            if (ball.y > goalTop && ball.y < goalBottom) {
                 scoreHome++;
                 resetToKickoff();
             } else {
+                ball.x = canvas.width - MARGIN;
                 ball.vx *= -0.7;
             }
         }
-        if (ball.x <= 12) {
-            if (ball.y > canvas.height / 2 - 75 && ball.y < canvas.height / 2 + 75) {
+        if (ball.x <= MARGIN) {
+            if (ball.y > goalTop && ball.y < goalBottom) {
                 scoreAway++;
                 resetToKickoff();
             } else {
+                ball.x = MARGIN;
                 ball.vx *= -0.7;
             }
         }
 
-        if (ball.y <= 12 || ball.y >= canvas.height - 12) {
+        if (ball.y <= MARGIN) {
+            ball.y = MARGIN;
+            ball.vy *= -0.7;
+        }
+        if (ball.y >= canvas.height - MARGIN) {
+            ball.y = canvas.height - MARGIN;
             ball.vy *= -0.7;
         }
 
@@ -517,22 +543,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // 잔디 배경
         ctx.fillStyle = "#2e7d32";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+        // 경기장 외곽선
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
         ctx.lineWidth = 3;
-        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+        ctx.strokeRect(MARGIN, MARGIN, canvas.width - (MARGIN * 2), canvas.height - (MARGIN * 2));
 
+        // 센터 라인 및 센터 서클
         ctx.beginPath();
-        ctx.moveTo(canvas.width / 2, 10);
-        ctx.lineTo(canvas.width / 2, canvas.height - 10);
+        ctx.moveTo(canvas.width / 2, MARGIN);
+        ctx.lineTo(canvas.width / 2, canvas.height - MARGIN);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, 60, 0, Math.PI * 2);
+        ctx.arc(canvas.width / 2, canvas.height / 2, 55, 0, Math.PI * 2);
         ctx.stroke();
 
+        // --- 골대 세팅 및 그리기 ---
+        const goalTop = canvas.height / 2 - GOAL_HEIGHT / 2;
+
+        // 왼쪽 골대 (원정팀 진영)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+        ctx.fillRect(MARGIN - GOAL_WIDTH, goalTop, GOAL_WIDTH, GOAL_HEIGHT);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(MARGIN - GOAL_WIDTH, goalTop, GOAL_WIDTH, GOAL_HEIGHT);
+
+        // 오른쪽 골대 (홈팀 진영)
+        ctx.fillRect(canvas.width - MARGIN, goalTop, GOAL_WIDTH, GOAL_HEIGHT);
+        ctx.strokeRect(canvas.width - MARGIN, goalTop, GOAL_WIDTH, GOAL_HEIGHT);
+
+        // 선수 및 공 그리기
         homeTeam.forEach(p => drawPlayer(p));
         awayTeam.forEach(p => drawPlayer(p));
 
@@ -545,12 +589,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
 
         if (matchState === 'KICKOFF') {
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
-            ctx.fillRect(canvas.width / 2 - 200, canvas.height / 2 - 35, 400, 50);
+            ctx.fillStyle = "rgba(0,0,0,0.65)";
+            ctx.fillRect(canvas.width / 2 - 200, canvas.height / 2 - 30, 400, 45);
             ctx.fillStyle = "#00ff87";
             ctx.font = "bold 15px Arial";
             ctx.textAlign = "center";
-            ctx.fillText("S키 또는 마우스 클릭 시 즉시 시작 및 패스!", canvas.width / 2, canvas.height / 2 - 5);
+            ctx.fillText("S키 또는 마우스 클릭 시 즉시 시작 및 패스!", canvas.width / 2, canvas.height / 2 - 2);
         }
     }
 
