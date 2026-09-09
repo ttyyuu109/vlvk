@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web-FC Online (Full Match Edition)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>WEB-FC ONLINE</h1>
+            <div class="user-info">
+                <span>보유 BP: <strong id="user-bp">10,000</strong> BP</span>
+                <span>클럽 가치: <strong id="club-value">0</strong> BP</span>
+            </div>
+        </header>
+
+        <main>
+            <nav class="tab-menu">
+                <button class="tab-btn active" data-tab="squad-tab">스쿼드 관리</button>
+                <button class="tab-btn" data-tab="match-tab">경기 플레이</button>
+                <button class="tab-btn" data-tab="store-tab">상점 (카드팩)</button>
+            </nav>
+
+            <section id="squad-tab" class="tab-content active">
+                <h2>나의 드림팀 스쿼드 (11명)</h2>
+                <div class="squad-container">
+                    <div id="field" class="soccer-field">
+                        <div class="field-line center-line"></div>
+                        <div class="field-line center-circle"></div>
+                    </div>
+                    <div class="inventory">
+                        <h3>보유 선수 목록</h3>
+                        <div id="player-list" class="card-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="match-tab" class="tab-content">
+                <div class="match-controls">
+                    <button id="start-match-btn">경기 시작</button>
+                    <div class="score-board">
+                        <span id="home-name">내 팀</span>
+                        <span id="score">0 : 0</span>
+                        <span id="away-name">AI FC</span>
+                        <span id="match-half" class="match-status">전반전</span>
+                        <span id="match-timer" class="match-status">00:00</span>
+                    </div>
+                </div>
+                <div class="canvas-wrapper">
+                    <!-- 더 초대형화된 11대11 표준 경기장 -->
+                    <canvas id="gameCanvas" width="1500" height="850"></canvas>
+                </div>
+                <div class="controls-guide">
+                    <p><strong>일반 조작:</strong> 이동 (방향키/WASD) | 선수교체 (Q) | 패스/킥오프 (S) | 슈팅 (D)</p>
+                    <p><strong>득점 후 세레머니:</strong> 1, 2, 3 번 키 입력 시 특수 세레머니 동작</p>
+                </div>
+            </section>
+
+            <section id="store-tab" class="tab-content">
+                <h2>선수 팩 개봉</h2>
+                <div class="store-grid">
+                    <div class="pack-card">
+                        <h3>ALL 선수 팩</h3>
+                        <p>가격: 1,000 BP</p>
+                        <button id="buy-pack-btn">구매하기</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
